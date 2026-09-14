@@ -1,0 +1,836 @@
+/* ==========================================================================
+   KITH & KIN - FAMILY TREE BUILDER DESIGN SYSTEM
+   ========================================================================== */
+
+:root {
+  /* Typography */
+  --font-heading: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-body: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+  /* Warm Genealogy Color Palette */
+  --bg-page: #fbf9f5;
+  --bg-surface: #ffffff;
+  --bg-surface-hover: #faf7f2;
+  --bg-subtle: #f4efe6;
+  --bg-muted: #e9e3d7;
+  
+  --border-color: #e5dfd3;
+  --border-hover: #d3cbbe;
+  --border-light: #f0ece3;
+
+  --text-primary: #1c1917;
+  --text-secondary: #57534e;
+  --text-muted: #78716c;
+  --text-inverse: #ffffff;
+
+  /* Brand Accents */
+  --primary: #0f766e;
+  --primary-hover: #115e59;
+  --primary-light: #f0fdfa;
+  --primary-border: #99f6e4;
+  --primary-ring: rgba(15, 118, 110, 0.25);
+
+  --accent-amber: #b45309;
+  --accent-amber-light: #fef3c7;
+  --accent-amber-border: #fde68a;
+
+  --danger: #be123c;
+  --danger-hover: #9f1239;
+  --danger-light: #fff1f2;
+  --danger-border: #fecdd3;
+
+  /* Gender Tags */
+  --male-bg: #e0f2fe;
+  --male-text: #0369a1;
+  --male-border: #bae6fd;
+
+  --female-bg: #fce7f3;
+  --female-text: #be185d;
+  --female-border: #fbcfe8;
+
+  --other-bg: #ede9fe;
+  --other-text: #6d28d9;
+  --other-border: #ddd6fe;
+
+  --unknown-bg: #f5f5f4;
+  --unknown-text: #57534e;
+  --unknown-border: #e7e5e4;
+
+  /* Shadows */
+  --shadow-xs: 0 1px 2px rgba(28, 25, 23, 0.04);
+  --shadow-sm: 0 2px 4px rgba(28, 25, 23, 0.05);
+  --shadow-md: 0 4px 8px -1px rgba(28, 25, 23, 0.07), 0 2px 4px -2px rgba(28, 25, 23, 0.05);
+  --shadow-lg: 0 12px 24px -4px rgba(28, 25, 23, 0.09), 0 4px 6px -2px rgba(28, 25, 23, 0.04);
+  --shadow-xl: 0 20px 32px -6px rgba(28, 25, 23, 0.12), 0 8px 10px -4px rgba(28, 25, 23, 0.05);
+  --shadow-node: 0 4px 12px rgba(28, 25, 23, 0.08), 0 1px 3px rgba(28, 25, 23, 0.04);
+  --shadow-node-hover: 0 12px 24px -2px rgba(28, 25, 23, 0.14), 0 4px 8px -2px rgba(28, 25, 23, 0.06);
+
+  /* Transitions */
+  --transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-smooth: 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Radius */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-full: 9999px;
+}
+
+/* Reset & Base */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  width: 100%;
+  min-height: 100%;
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--text-primary);
+  background-color: var(--bg-page);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  color: var(--text-primary);
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button, input, select, textarea {
+  font: inherit;
+}
+
+/* ==========================================================================
+   BUTTONS
+   ========================================================================== */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 0.925rem;
+  padding: 9px 18px;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  text-decoration: none;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.btn-primary {
+  background-color: var(--primary);
+  color: var(--text-inverse);
+  border-color: var(--primary);
+}
+.btn-primary:hover {
+  background-color: var(--primary-hover);
+  border-color: var(--primary-hover);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
+}
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+.btn-secondary {
+  background-color: var(--bg-subtle);
+  color: var(--text-primary);
+  border-color: var(--border-color);
+}
+.btn-secondary:hover {
+  background-color: var(--border-light);
+  border-color: var(--border-hover);
+}
+
+.btn-outline {
+  background-color: var(--bg-surface);
+  color: var(--text-primary);
+  border-color: var(--border-color);
+}
+.btn-outline:hover {
+  background-color: var(--bg-surface-hover);
+  border-color: var(--border-hover);
+}
+
+.btn-ghost {
+  background-color: transparent;
+  color: var(--text-secondary);
+}
+.btn-ghost:hover {
+  background-color: var(--bg-subtle);
+  color: var(--text-primary);
+}
+
+.btn-danger {
+  background-color: var(--danger);
+  color: var(--text-inverse);
+  border-color: var(--danger);
+}
+.btn-danger:hover {
+  background-color: var(--danger-hover);
+  border-color: var(--danger-hover);
+}
+
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 0.85rem;
+  border-radius: var(--radius-sm);
+}
+
+.btn-lg {
+  padding: 13px 26px;
+  font-size: 1.05rem;
+  border-radius: var(--radius-lg);
+}
+
+.btn-icon {
+  padding: 8px;
+  border-radius: var(--radius-md);
+}
+
+/* ==========================================================================
+   INPUTS & FORMS
+   ========================================================================== */
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+  margin-bottom: 16px;
+}
+
+.form-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.form-label .required {
+  color: var(--danger);
+  margin-left: 2px;
+}
+
+.form-input, .form-select, .form-textarea {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background-color: var(--bg-surface);
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.form-input:focus, .form-select:focus, .form-textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-ring);
+}
+
+.form-input::placeholder, .form-textarea::placeholder {
+  color: var(--text-muted);
+}
+
+.form-input.error, .form-select.error, .form-textarea.error {
+  border-color: var(--danger);
+}
+
+.form-error {
+  font-size: 0.8rem;
+  color: var(--danger);
+  margin-top: 4px;
+}
+
+.form-hint {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+/* ==========================================================================
+   BADGES & PILLS
+   ========================================================================== */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: var(--radius-full);
+  line-height: 1.3;
+}
+
+.badge-male {
+  background-color: var(--male-bg);
+  color: var(--male-text);
+  border: 1px solid var(--male-border);
+}
+
+.badge-female {
+  background-color: var(--female-bg);
+  color: var(--female-text);
+  border: 1px solid var(--female-border);
+}
+
+.badge-other {
+  background-color: var(--other-bg);
+  color: var(--other-text);
+  border: 1px solid var(--other-border);
+}
+
+.badge-unknown {
+  background-color: var(--unknown-bg);
+  color: var(--unknown-text);
+  border: 1px solid var(--unknown-border);
+}
+
+.badge-primary {
+  background-color: var(--primary-light);
+  color: var(--primary);
+  border: 1px solid var(--primary-border);
+}
+
+.badge-amber {
+  background-color: var(--accent-amber-light);
+  color: var(--accent-amber);
+  border: 1px solid var(--accent-amber-border);
+}
+
+/* ==========================================================================
+   MODALS & BACKDROPS
+   ========================================================================== */
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(28, 25, 23, 0.45);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.modal-container {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xl);
+  width: 100%;
+  max-width: 540px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: modalScale 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.modal-container.modal-lg {
+  max-width: 700px;
+}
+
+.modal-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.modal-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.modal-body {
+  padding: 24px;
+  overflow-y: auto;
+  text-align: left;
+}
+
+.modal-footer {
+  padding: 16px 24px;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  background-color: var(--bg-surface-hover);
+}
+
+/* ==========================================================================
+   SIDE DRAWER (PERSON DETAILS)
+   ========================================================================== */
+
+.drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(28, 25, 23, 0.35);
+  backdrop-filter: blur(2px);
+  z-index: 900;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.drawer-content {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 420px;
+  max-width: 100vw;
+  background-color: var(--bg-surface);
+  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.12);
+  border-left: 1px solid var(--border-color);
+  z-index: 950;
+  display: flex;
+  flex-direction: column;
+  animation: slideLeft 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (max-width: 768px) {
+  .drawer-content {
+    top: auto;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    max-height: 85vh;
+    border-left: none;
+    border-top: 1px solid var(--border-color);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.15);
+    animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+}
+
+/* ==========================================================================
+   REACT FLOW CUSTOM PERSON NODE & DRAGGING
+   ========================================================================== */
+
+.person-node {
+  width: 185px;
+  min-height: 220px;
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1.5px solid #e2e8f0;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05), 0 2px 6px -1px rgba(0, 0, 0, 0.03);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast);
+  cursor: grab;
+  position: relative;
+  text-align: center;
+  user-select: none;
+}
+
+.person-node:active {
+  cursor: grabbing;
+}
+
+.person-node:hover {
+  box-shadow: 0 10px 25px -4px rgba(0, 0, 0, 0.08), 0 4px 10px -2px rgba(0, 0, 0, 0.04);
+  border-color: var(--primary);
+  transform: translateY(-3px);
+}
+
+/* Drag indicator grip at top of node */
+.person-node-drag-bar {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding-top: 6px;
+  padding-bottom: 2px;
+  opacity: 0.25;
+  transition: opacity var(--transition-fast);
+}
+
+.person-node:hover .person-node-drag-bar {
+  opacity: 0.8;
+}
+
+.person-node-drag-dots {
+  display: flex;
+  gap: 3px;
+}
+
+.person-node-drag-dots span {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background-color: var(--text-muted);
+}
+
+.person-node.selected {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-ring), 0 10px 25px -4px rgba(0, 0, 0, 0.1);
+}
+
+.person-node.highlighted {
+  border-color: var(--accent-amber);
+  box-shadow: 0 0 0 4px var(--accent-amber-light), 0 0 20px rgba(180, 83, 9, 0.3);
+  animation: nodePulse 1.5s infinite alternate;
+}
+
+.person-node-inner {
+  padding: 10px 14px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.person-node-avatar-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.person-node-avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid #ffffff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.25rem;
+}
+
+.person-node-avatar.male {
+  background: #e0f2fe;
+  color: #0369a1;
+  border-color: #ffffff;
+}
+
+.person-node-avatar.female {
+  background: #fce7f3;
+  color: #be185d;
+  border-color: #ffffff;
+}
+
+.person-node-avatar.other {
+  background: #f3e8ff;
+  color: #6b21a8;
+  border-color: #ffffff;
+}
+
+.person-node-avatar.unknown {
+  background: #f1f5f9;
+  color: #475569;
+  border-color: #ffffff;
+}
+
+.person-node-role {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #ea580c;
+  margin-bottom: 4px;
+  letter-spacing: 0.01em;
+}
+
+.person-node-name {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #1e293b;
+  line-height: 1.25;
+  margin-bottom: 8px;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.person-node-dates {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.person-node-birth-year {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.person-node-age-pill {
+  font-size: 0.72rem;
+  font-weight: 600;
+  background: #94a3b8;
+  color: #ffffff;
+  border-radius: 9999px;
+  padding: 2px 8px;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  display: inline-block;
+}
+
+
+.person-node-footer {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid #f1f5f9;
+  width: 100%;
+}
+
+/* ==========================================================================
+   REACT FLOW HANDLES & CONNECTION HIT AREAS
+   ========================================================================== */
+
+.react-flow__handle {
+  width: 14px !important;
+  height: 14px !important;
+  border: 2.5px solid #ffffff !important;
+  border-radius: var(--radius-full) !important;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.25) !important;
+  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.15s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  z-index: 25 !important;
+  cursor: crosshair !important;
+}
+
+/* Generous invisible hit-area (32px) for effortless mouse targeting */
+.react-flow__handle::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: transparent;
+}
+
+.react-flow__handle:hover {
+  transform: scale(1.45) !important;
+}
+
+/* Top & Bottom Handles: Parent-Child relations (Forest Emerald) */
+.handle-top, .handle-bottom {
+  background-color: var(--primary) !important;
+}
+.handle-top:hover, .handle-bottom:hover {
+  box-shadow: 0 0 0 4px var(--primary-ring), 0 3px 8px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Left & Right Handles: Spouse / Partner relations (Warm Amber) */
+.handle-left, .handle-right {
+  background-color: #d97706 !important;
+}
+.handle-left:hover, .handle-right:hover {
+  box-shadow: 0 0 0 4px rgba(217, 119, 6, 0.3), 0 3px 8px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Custom Spouse Edge Connector */
+.spouse-edge-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  background: #ffffff;
+  border: 1.5px solid #d97706;
+  border-radius: var(--radius-full);
+  color: #b45309;
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition: transform var(--transition-fast);
+}
+
+.spouse-edge-badge:hover {
+  transform: scale(1.15);
+  background: #fef3c7;
+}
+
+/* ==========================================================================
+   CANVAS TOOLBAR & CONTROLS
+   ========================================================================== */
+
+.tree-toolbar {
+  height: 56px;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  z-index: 10;
+  gap: 12px;
+}
+
+.search-box-wrapper {
+  position: relative;
+  width: 260px;
+}
+
+.search-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  max-height: 280px;
+  overflow-y: auto;
+  z-index: 50;
+}
+
+.search-result-item {
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+  border-bottom: 1px solid var(--border-light);
+}
+
+.search-result-item:last-child {
+  border-bottom: none;
+}
+
+.search-result-item:hover {
+  background-color: var(--bg-surface-hover);
+}
+
+/* Custom React Flow Controls & MiniMap Styling */
+.react-flow__controls {
+  box-shadow: var(--shadow-md) !important;
+  border-radius: var(--radius-md) !important;
+  overflow: hidden !important;
+  border: 1px solid var(--border-color) !important;
+  background: var(--bg-surface) !important;
+}
+
+.react-flow__controls-button {
+  border-bottom: 1px solid var(--border-light) !important;
+  background: var(--bg-surface) !important;
+  fill: var(--text-secondary) !important;
+}
+
+.react-flow__controls-button:hover {
+  background: var(--bg-surface-hover) !important;
+  fill: var(--primary) !important;
+}
+
+.react-flow__minimap {
+  border-radius: var(--radius-md) !important;
+  border: 1px solid var(--border-color) !important;
+  box-shadow: var(--shadow-md) !important;
+  background: var(--bg-surface) !important;
+}
+
+/* ==========================================================================
+   ANIMATIONS
+   ========================================================================== */
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modalScale {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes slideLeft {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+@keyframes nodePulse {
+  0% { transform: scale(1); }
+  100% { transform: scale(1.02); }
+}
+
+/* ==========================================================================
+   SCROLLBAR STYLING
+   ========================================================================== */
+
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #d6cfc4;
+  border-radius: var(--radius-full);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #b8af9f;
+}
+
+/* ==========================================================================
+   REACT FLOW SELECTION MARQUEE & MULTI-SELECT
+   ========================================================================== */
+
+.react-flow__selection {
+  background: rgba(15, 118, 110, 0.08) !important;
+  border: 1.5px dashed var(--primary) !important;
+  border-radius: 6px !important;
+  pointer-events: none !important;
+}
+
+.person-node.selected {
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 3px var(--primary-ring), 0 10px 25px -4px rgba(0, 0, 0, 0.12) !important;
+}
+
