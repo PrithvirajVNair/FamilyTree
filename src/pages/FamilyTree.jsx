@@ -1,21 +1,26 @@
-import React, { useState, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { ReactFlowProvider } from '@xyflow/react';
 import { useAuth } from '../context/AuthContext';
 import { useFamilyData } from '../hooks/useFamilyData';
 import { Navbar } from '../components/layout/Navbar';
 import { TreeToolbar } from '../components/tree/TreeToolbar';
+import { TreeBreadcrumb } from '../components/tree/TreeBreadcrumb';
 import { TreeCanvasInner } from '../components/tree/TreeCanvas';
+import { ViewFilterModal } from '../components/tree/ViewFilterModal';
 import { PersonDetailDrawer } from '../components/person/PersonDetailDrawer';
 import { PersonFormModal } from '../components/person/PersonFormModal';
 import { ConnectModal } from '../components/person/ConnectModal';
 import { DeleteConfirmModal } from '../components/person/DeleteConfirmModal';
+import { buildFamilyTreeView } from '../utils/familyTreeView';
 import { AlertCircle } from 'lucide-react';
 
 export function FamilyTree() {
   const { familyId } = useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlPersonId = searchParams.get('person');
 
   const {
     family,
@@ -33,6 +38,41 @@ export function FamilyTree() {
     loadDemoData,
   } = useFamilyData(familyId, user?.id);
 
+  // View filtering & customization state (who should be there in this view)
+  const [viewOptions, setViewOptions] = useState({
+    ancestors: 2,
+    descendants: 2,
+    includeSpouses: true,
+    includeSiblings: true,
+    customIncludedIds: null,
+    showAllConnected: false,
+  });
+  const [filterModalOpen, setFilterModalOpen] = useState(false);
+
+  // Sub-Graph Generation: Filter visible people and relationships around active root person
+  const {
+    people: visiblePeople,
+    relationships: visibleRelationships,
+    rootPerson,
+    allPeopleCount,
+    isFiltered,
+    allRelativesWithKinship,
+  } = useMemo(() => {
+    return buildFamilyTreeView({
+      rootPersonId: urlPersonId,
+      people,
+      relationships,
+      options: viewOptions,
+    });
+  }, [urlPersonId, people, relationships, viewOptions]);
+
+  // Sync default root person to URL if no ?person= query param is specified
+  useEffect(() => {
+    if (!urlPersonId && rootPerson?.id) {
+      setSearchParams({ person: rootPerson.id }, { replace: true });
+    }
+  }, [urlPersonId, rootPerson, setSearchParams]);
+
   // UI state
   const [selectedPerson, setSelectedPerson] = useState(null);
   const [highlightedPersonId, setHighlightedPersonId] = useState(null);
@@ -47,6 +87,40 @@ export function FamilyTree() {
 
   const fitViewRef = useRef(null);
   const resetLayoutRef = useRef(null);
+
+  // Switch root person view (Explore Family)
+  const handleExploreFamily = useCallback(
+    (personId, openCustomize = false) => {
+      if (!personId) return;
+      // Reset custom member overrides when jumping to a new person perspective
+      setViewOptions((prev) => ({
+        ...prev,
+        customIncludedIds: null,
+        showAllConnected: false,
+      }));
+      setSearchParams({ person: personId });
+      setHighlightedPersonId(personId);
+      if (openCustomize) {
+        setFilterModalOpen(true);
+      }
+      setTimeout(() => {
+        setHighlightedPersonId((curr) => (curr === personId ? null : curr));
+      }, 2500);
+    },
+    [setSearchParams]
+  );
+
+  // Reset view filter back to default
+  const handleResetView = useCallback(() => {
+    setViewOptions({
+      ancestors: 2,
+      descendants: 2,
+      includeSpouses: true,
+      includeSiblings: true,
+      customIncludedIds: null,
+      showAllConnected: false,
+    });
+  }, []);
 
   // Handling person selection (from canvas or search)
   const handleSelectPerson = (person) => {
@@ -68,6 +142,7 @@ export function FamilyTree() {
     setRelativeConnection({ targetPersonId, relationType });
     setPersonModalOpen(true);
   };
+
 
   // Open person edit modal
   const handleEditPerson = (person) => {
@@ -157,12 +232,24 @@ export function FamilyTree() {
         canEdit={canEdit}
       />
 
+      {/* 2b. Navigation Context & Perspective Breadcrumb */}
+      <TreeBreadcrumb
+        rootPerson={rootPerson}
+        onNavigateBack={() => navigate(-1)}
+        canGoBack={true}
+        onResetToMain={handleResetView}
+        onOpenFilterModal={() => setFilterModalOpen(true)}
+        totalPeopleCount={allPeopleCount}
+        visiblePeopleCount={visiblePeople.length}
+        isFiltered={isFiltered}
+      />
+
       {/* 3. Interactive Family Tree Canvas */}
       <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
         <ReactFlowProvider>
           <TreeCanvasInner
-            people={people}
-            relationships={relationships}
+            people={visiblePeople}
+            relationships={visibleRelationships}
             selectedPerson={selectedPerson}
             highlightedPersonId={highlightedPersonId}
             onSelectPerson={handleSelectPerson}
@@ -186,16 +273,38 @@ export function FamilyTree() {
             person={selectedPerson}
             allPeople={people}
             relationships={relationships}
+            rootPersonId={rootPerson?.id}
+            onExploreFamily={handleExploreFamily}
+            onOpenFilterModal={(targetPersonId) => {
+              if (targetPersonId && targetPersonId !== rootPerson?.id) {
+                handleExploreFamily(targetPersonId, true);
+              } else {
+                setFilterModalOpen(true);
+              }
+            }}
             onClose={() => setSelectedPerson(null)}
             onEdit={handleEditPerson}
             onDelete={(p) => setDeletingPerson(p)}
             onAddRelative={handleAddRelative}
+            onAddRelationship={addRelationship}
             onDeleteRelationship={deleteRelationship}
             onSelectPerson={handleSelectPerson}
             canEdit={canEdit}
           />
         )}
       </div>
+
+      {/* View Filter / Select Who Should Be There Modal */}
+      <ViewFilterModal
+        isOpen={filterModalOpen}
+        onClose={() => setFilterModalOpen(false)}
+        rootPerson={rootPerson}
+        allRelativesWithKinship={allRelativesWithKinship}
+        currentOptions={viewOptions}
+        onApplyOptions={(newOpts) => {
+          setViewOptions((prev) => ({ ...prev, ...newOpts }));
+        }}
+      />
 
       {/* Add / Edit Person Form Modal */}
       <PersonFormModal

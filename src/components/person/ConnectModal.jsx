@@ -73,7 +73,63 @@ export function ConnectModal({
             )}
 
             <div className="form-group">
-              <label className="form-label">First Relative</label>
+              <label className="form-label">Relationship Type</label>
+              <select
+                className="form-select"
+                value={relType}
+                onChange={(e) => setRelType(e.target.value)}
+              >
+                <option value="parent">Parent &rarr; Child (Parent above Child)</option>
+                <option value="spouse">&harr; Spouse / Partner (Same generation tier)</option>
+              </select>
+            </div>
+
+            <div style={{
+              padding: '12px 14px',
+              backgroundColor: 'var(--primary-light)',
+              border: '1px solid var(--primary-border)',
+              borderRadius: 'var(--radius-md)',
+              fontSize: '0.85rem',
+              color: 'var(--primary)',
+              marginBottom: '16px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}>
+              <div>
+                {relType === 'parent' ? (
+                  <span>
+                    <strong>{getPersonFullName(people.find((p) => p.id === person1Id))}</strong> is <strong>Parent</strong> of{' '}
+                    <strong>{getPersonFullName(people.find((p) => p.id === person2Id))}</strong> (Child)
+                  </span>
+                ) : (
+                  <span>
+                    <strong>{getPersonFullName(people.find((p) => p.id === person1Id))}</strong> and{' '}
+                    <strong>{getPersonFullName(people.find((p) => p.id === person2Id))}</strong> are <strong>Spouses</strong>
+                  </span>
+                )}
+              </div>
+              {relType === 'parent' && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const temp = person1Id;
+                    setPerson1Id(person2Id);
+                    setPerson2Id(temp);
+                  }}
+                  className="btn btn-ghost btn-sm"
+                  style={{ fontSize: '0.75rem', padding: '3px 8px', color: 'var(--primary)' }}
+                  title="Swap Parent and Child"
+                >
+                  ⇄ Swap
+                </button>
+              )}
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">
+                {relType === 'parent' ? '1. Parent (Placed Above in Tree)' : 'First Spouse / Partner'}
+              </label>
               <select
                 className="form-select"
                 value={person1Id}
@@ -87,20 +143,10 @@ export function ConnectModal({
               </select>
             </div>
 
-            <div className="form-group">
-              <label className="form-label">Relationship Connection</label>
-              <select
-                className="form-select"
-                value={relType}
-                onChange={(e) => setRelType(e.target.value)}
-              >
-                <option value="parent">is Parent of &rarr;</option>
-                <option value="spouse">&harr; is Spouse / Partner of</option>
-              </select>
-            </div>
-
             <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label">Second Relative</label>
+              <label className="form-label">
+                {relType === 'parent' ? '2. Child (Placed Below in Tree)' : 'Second Spouse / Partner'}
+              </label>
               <select
                 className="form-select"
                 value={person2Id}

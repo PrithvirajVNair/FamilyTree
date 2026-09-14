@@ -1,12 +1,12 @@
 import dagre from 'dagre';
-import { getParentIds, getChildIds, getSpouseIds } from './relationshipUtils';
+import { getParentIds, getChildIds, getSpouseIds } from './relationshipUtils.js';
 
-export const NODE_WIDTH = 185;
+export const NODE_WIDTH = 190;
 export const NODE_HEIGHT = 220;
-export const SPOUSE_GAP = 50;
-export const SIBLING_GAP = 40;
-export const FAMILY_UNIT_GAP = 90;
-export const GENERATION_HEIGHT = 300;
+export const SPOUSE_GAP = 40;
+export const SIBLING_GAP = 36;
+export const FAMILY_UNIT_GAP = 84;
+export const GENERATION_HEIGHT = 360;
 
 /**
  * Calculates strict generational levels for every person in the tree.
@@ -94,20 +94,19 @@ export function calculateGenerations(people = [], relationships = []) {
 }
 
 /**
- * Returns average parent center X for a person, or null if no parents placed yet.
+ * Returns birth timestamp for ordering siblings chronologically, or 0 if none.
  */
-function getParentCenterX(personId, relationships, positions) {
-  const parentIds = getParentIds(personId, relationships);
-  const xs = parentIds
-    .map((pId) => positions.get(pId)?.x)
-    .filter((x) => x !== undefined);
-  if (xs.length === 0) return null;
-  return xs.reduce((a, b) => a + b, 0) / xs.length;
+function getPersonSortKey(person) {
+  if (person.birth_date) {
+    const timestamp = new Date(person.birth_date).getTime();
+    if (!isNaN(timestamp)) return timestamp;
+  }
+  return (person.first_name || '') + (person.last_name || '');
 }
 
 /**
- * Automatically computes hierarchical layout coordinates for portrait pedigree cards
- * and orthogonal T-junction connectors.
+ * Automatically computes hierarchical layout coordinates for pedigree cards
+ * with sibling block centering, chronological ordering, and orthogonal connectors.
  */
 export function buildFamilyTreeLayout(people = [], relationships = []) {
   if (!people || people.length === 0) {
@@ -116,185 +115,242 @@ export function buildFamilyTreeLayout(people = [], relationships = []) {
 
   const generations = calculateGenerations(people, relationships);
 
-  // 1. Initial Dagre pass to compute relative horizontal ordering
-  const g = new dagre.graphlib.Graph();
-  g.setGraph({
-    rankdir: 'TB',
-    nodesep: 50,
-    ranksep: 120,
-    edgesep: 30,
-    marginx: 40,
-    marginy: 40,
-  });
-  g.setDefaultEdgeLabel(() => ({}));
-
-  people.forEach((p) => {
-    g.setNode(p.id, { width: NODE_WIDTH, height: NODE_HEIGHT });
-  });
-
-  relationships
-    .filter((r) => r.relationship_type === 'parent')
-    .forEach((r) => {
-      g.setEdge(r.person_1_id, r.person_2_id);
-    });
-
-  relationships
-    .filter((r) => r.relationship_type === 'spouse')
-    .forEach((r) => {
-      const p1Children = getChildIds(r.person_1_id, relationships);
-      const p2Children = getChildIds(r.person_2_id, relationships);
-      p1Children.forEach((cId) => {
-        if (!g.hasEdge(r.person_2_id, cId)) g.setEdge(r.person_2_id, cId);
-      });
-      p2Children.forEach((cId) => {
-        if (!g.hasEdge(r.person_1_id, cId)) g.setEdge(r.person_1_id, cId);
-      });
-    });
-
-  try {
-    dagre.layout(g);
-  } catch (err) {
-    console.warn('Dagre layout notice:', err);
-  }
-
-  // 2. Group people into generational tiers
+  // Group people into generational tiers
   const tiers = new Map();
   people.forEach((p) => {
     const gen = generations.get(p.id) || 0;
     if (!tiers.has(gen)) tiers.set(gen, []);
-    const dNode = g.node(p.id);
-    tiers.get(gen).push({
-      person: p,
-      dagreX: dNode ? dNode.x : 0,
-    });
+    tiers.get(gen).push(p);
   });
 
-  // 3. Lay out each tier from top generation to bottom generation
   const positions = new Map();
   const sortedGens = Array.from(tiers.keys()).sort((a, b) => a - b);
 
+  // 1. Initial Top-Down Placement
   sortedGens.forEach((gen) => {
     const tierMembers = tiers.get(gen);
     const placed = new Set();
     const units = [];
 
-    // Form units: couples or single individuals
-    tierMembers.forEach((item) => {
-      if (placed.has(item.person.id)) return;
-      placed.add(item.person.id);
+    // A. Form Units: Married Couples or Single Individuals
+    tierMembers.forEach((p) => {
+      if (placed.has(p.id)) return;
+      placed.add(p.id);
 
-      const spouseIds = getSpouseIds(item.person.id, relationships);
-      const spouseItem = tierMembers.find(
-        (m) => spouseIds.includes(m.person.id) && !placed.has(m.person.id)
-      );
+      const spouseIds = getSpouseIds(p.id, relationships);
+      const spouse = tierMembers.find((m) => spouseIds.includes(m.id) && !placed.has(m.id));
 
-      if (spouseItem) {
-        placed.add(spouseItem.person.id);
-        const p1 = item.person;
-        const p2 = spouseItem.person;
+      if (spouse) {
+        placed.add(spouse.id);
 
-        const p1ParentX = getParentCenterX(p1.id, relationships, positions);
-        const p2ParentX = getParentCenterX(p2.id, relationships, positions);
+        // Determine left vs right in the couple:
+        // If one person is biological child of parents above, keep consistent or chronological order
+        const p1Parents = getParentIds(p.id, relationships);
+        const p2Parents = getParentIds(spouse.id, relationships);
 
-        let orderedCouple = [p1, p2];
-
-        if (p1ParentX !== null && p2ParentX !== null) {
-          // Both have parents: place the one whose parents are further left on the left!
-          orderedCouple = p1ParentX <= p2ParentX ? [p1, p2] : [p2, p1];
-        } else if (p1ParentX !== null && p2ParentX === null) {
-          // p1 is biological child, p2 is in-law
-          // If p1's parents are further left, place [p1, p2]; if further right, place [p2, p1]
-          orderedCouple = [p1, p2];
-        } else if (p2ParentX !== null && p1ParentX === null) {
-          // p2 is biological child, p1 is in-law
-          orderedCouple = [p1, p2];
+        let orderedCouple = [p, spouse];
+        if (p1Parents.length > 0 && p2Parents.length === 0) {
+          orderedCouple = [p, spouse];
+        } else if (p2Parents.length > 0 && p1Parents.length === 0) {
+          orderedCouple = [spouse, p];
         } else {
-          // Neither has parents in the tree (e.g. Gen 0): sort by Dagre X
-          orderedCouple = item.dagreX <= spouseItem.dagreX ? [p1, p2] : [p2, p1];
+          // Consistent gender ordering (Male left, Female right) or chronological
+          if (p.gender === 'Female' && spouse.gender === 'Male') {
+            orderedCouple = [spouse, p];
+          } else {
+            orderedCouple = [p, spouse];
+          }
         }
 
-        // Calculate unit target center X
-        let targetX = null;
-        if (p1ParentX !== null && p2ParentX !== null) {
-          targetX = (p1ParentX + p2ParentX) / 2;
-        } else if (p1ParentX !== null) {
-          targetX = p1ParentX;
-        } else if (p2ParentX !== null) {
-          targetX = p2ParentX;
-        } else {
-          targetX = (item.dagreX + spouseItem.dagreX) / 2;
-        }
-
+        const bioPerson = p2Parents.length > 0 && p1Parents.length === 0 ? spouse : p;
         units.push({
+          id: `couple-${p.id}-${spouse.id}`,
           type: 'couple',
           people: orderedCouple,
-          targetX,
-          dagreX: (item.dagreX + spouseItem.dagreX) / 2,
+          bioPerson,
+          parentIds: getParentIds(bioPerson.id, relationships),
+          width: NODE_WIDTH * 2 + SPOUSE_GAP,
+          sortKey: getPersonSortKey(bioPerson),
         });
       } else {
-        // Single individual unit
-        const parentX = getParentCenterX(item.person.id, relationships, positions);
         units.push({
+          id: `single-${p.id}`,
           type: 'single',
-          people: [item.person],
-          targetX: parentX !== null ? parentX : item.dagreX,
-          dagreX: item.dagreX,
+          people: [p],
+          bioPerson: p,
+          parentIds: getParentIds(p.id, relationships),
+          width: NODE_WIDTH,
+          sortKey: getPersonSortKey(p),
         });
       }
     });
 
-    // Sort units horizontally by their target position
-    units.sort((a, b) => {
-      const aVal = a.targetX !== null ? a.targetX : a.dagreX;
-      const bVal = b.targetX !== null ? b.targetX : b.dagreX;
+    // B. Group Units into Sibling Blocks (units that share the exact same parents)
+    const siblingBlocks = new Map(); // key -> list of units
+    units.forEach((unit) => {
+      const pKey = unit.parentIds.length > 0
+        ? unit.parentIds.slice().sort().join('--')
+        : `root--${unit.id}`;
+
+      if (!siblingBlocks.has(pKey)) {
+        siblingBlocks.set(pKey, []);
+      }
+      siblingBlocks.get(pKey).push(unit);
+    });
+
+    // C. Sort siblings chronologically (order / hierarchy) within each sibling block
+    siblingBlocks.forEach((blockUnits) => {
+      blockUnits.sort((a, b) => {
+        if (typeof a.sortKey === 'number' && typeof b.sortKey === 'number') {
+          return a.sortKey - b.sortKey;
+        }
+        return String(a.sortKey).localeCompare(String(b.sortKey));
+      });
+    });
+
+    // D. Compute Block Target Positions and Center Sibling Blocks
+    const blockList = [];
+    siblingBlocks.forEach((blockUnits, pKey) => {
+      const blockWidth = blockUnits.reduce((acc, u) => acc + u.width, 0) +
+        (blockUnits.length - 1) * SIBLING_GAP;
+
+      // Determine target center X from parents in previous tier
+      let targetCenterX = null;
+      const sampleParentIds = blockUnits[0].parentIds;
+      if (sampleParentIds.length > 0) {
+        const pXs = sampleParentIds
+          .map((id) => positions.get(id))
+          .filter(Boolean);
+
+        if (pXs.length === 2) {
+          // Midpoint between both parents
+          const minX = Math.min(pXs[0].x, pXs[1].x);
+          const maxX = Math.max(pXs[0].x, pXs[1].x);
+          targetCenterX = (minX + maxX + NODE_WIDTH) / 2;
+        } else if (pXs.length === 1) {
+          targetCenterX = pXs[0].x + NODE_WIDTH / 2;
+        }
+      }
+
+      blockList.push({
+        pKey,
+        units: blockUnits,
+        width: blockWidth,
+        targetCenterX,
+      });
+    });
+
+    // Sort sibling blocks horizontally by target position
+    blockList.sort((a, b) => {
+      const aVal = a.targetCenterX !== null ? a.targetCenterX : 0;
+      const bVal = b.targetCenterX !== null ? b.targetCenterX : 0;
       return aVal - bVal;
     });
 
-    // Space out units with collision prevention
-    let curX = 40;
-    units.forEach((unit) => {
-      const unitWidth =
-        unit.type === 'couple' ? NODE_WIDTH * 2 + SPOUSE_GAP : NODE_WIDTH;
-      const idealX = unit.targetX !== null ? unit.targetX - unitWidth / 2 : curX;
-      const startX = Math.max(idealX, curX);
+    // E. Space out sibling blocks and place cards horizontally with collision resolution
+    let curX = 60;
+    blockList.forEach((block) => {
+      const idealStartX = block.targetCenterX !== null
+        ? block.targetCenterX - block.width / 2
+        : curX;
 
-      if (unit.type === 'single') {
-        positions.set(unit.people[0].id, {
-          x: startX,
-          y: gen * GENERATION_HEIGHT,
-        });
-        curX = startX + NODE_WIDTH + SIBLING_GAP;
-      } else {
-        const [leftPerson, rightPerson] = unit.people;
-        positions.set(leftPerson.id, {
-          x: startX,
-          y: gen * GENERATION_HEIGHT,
-        });
-        const rightX = startX + NODE_WIDTH + SPOUSE_GAP;
-        positions.set(rightPerson.id, {
-          x: rightX,
-          y: gen * GENERATION_HEIGHT,
-        });
-        curX = rightX + NODE_WIDTH + FAMILY_UNIT_GAP;
-      }
+      const blockStartX = Math.max(idealStartX, curX);
+
+      // Place each unit within the block sequentially
+      let unitX = blockStartX;
+      block.units.forEach((unit) => {
+        if (unit.type === 'single') {
+          positions.set(unit.people[0].id, {
+            x: unitX,
+            y: gen * GENERATION_HEIGHT,
+          });
+          unitX += NODE_WIDTH + SIBLING_GAP;
+        } else {
+          const [leftPerson, rightPerson] = unit.people;
+          positions.set(leftPerson.id, {
+            x: unitX,
+            y: gen * GENERATION_HEIGHT,
+          });
+          const rightX = unitX + NODE_WIDTH + SPOUSE_GAP;
+          positions.set(rightPerson.id, {
+            x: rightX,
+            y: gen * GENERATION_HEIGHT,
+          });
+          unitX += unit.width + SIBLING_GAP;
+        }
+      });
+
+      curX = blockStartX + block.width + FAMILY_UNIT_GAP;
     });
   });
 
-  // 4. Normalize minimum X to 40
+  // 2. Upward Pass: Center parents with children directly over their children's midpoint
+  // (Crucial for Gen 0 root couples like George & Mary / Venugopalan & Mayarani)
+  for (let i = sortedGens.length - 2; i >= 0; i--) {
+    const gen = sortedGens[i];
+    const tierMembers = tiers.get(gen);
+
+    tierMembers.forEach((person) => {
+      const spouseIds = getSpouseIds(person.id, relationships);
+      const spouse = tierMembers.find((m) => spouseIds.includes(m.id));
+
+      // Check if this couple has children
+      const pChildren = getChildIds(person.id, relationships);
+      const sChildren = spouse ? getChildIds(spouse.id, relationships) : [];
+      const childrenIds = spouse
+        ? pChildren.filter((cId) => sChildren.includes(cId))
+        : pChildren;
+
+      if (childrenIds.length > 0) {
+        const childXs = childrenIds
+          .map((cId) => positions.get(cId))
+          .filter(Boolean);
+
+        if (childXs.length > 0) {
+          const minChildX = Math.min(...childXs.map((p) => p.x));
+          const maxChildX = Math.max(...childXs.map((p) => p.x + NODE_WIDTH));
+          const childrenMidpoint = (minChildX + maxChildX) / 2;
+
+          const pPos = positions.get(person.id);
+          const sPos = spouse ? positions.get(spouse.id) : null;
+
+          if (spouse && pPos && sPos) {
+            const coupleWidth = NODE_WIDTH * 2 + SPOUSE_GAP;
+            const newLeftX = childrenMidpoint - coupleWidth / 2;
+            const leftPerson = pPos.x <= sPos.x ? person : spouse;
+            const rightPerson = pPos.x <= sPos.x ? spouse : person;
+
+            positions.set(leftPerson.id, { x: newLeftX, y: gen * GENERATION_HEIGHT });
+            positions.set(rightPerson.id, {
+              x: newLeftX + NODE_WIDTH + SPOUSE_GAP,
+              y: gen * GENERATION_HEIGHT,
+            });
+          } else if (pPos && !spouse) {
+            positions.set(person.id, {
+              x: childrenMidpoint - NODE_WIDTH / 2,
+              y: gen * GENERATION_HEIGHT,
+            });
+          }
+        }
+      }
+    });
+  }
+
+  // 3. Normalize minimum X to at least 60px padding
   let minX = Infinity;
   positions.forEach((pos) => {
     if (pos.x < minX) minX = pos.x;
   });
-  if (minX !== Infinity && minX < 40) {
-    const shift = 40 - minX;
+  if (minX !== Infinity && minX < 60) {
+    const shift = 60 - minX;
     positions.forEach((pos) => {
       pos.x += shift;
     });
   }
 
-  // 5. Build Person Nodes
+  // 4. Build React Flow Nodes
   const nodes = people.map((person) => {
-    const pos = positions.get(person.id) || { x: 0, y: 0 };
+    const pos = positions.get(person.id) || { x: 60, y: 0 };
     return {
       id: person.id,
       type: 'personNode',
@@ -307,13 +363,13 @@ export function buildFamilyTreeLayout(people = [], relationships = []) {
     };
   });
 
-  // 6. Build Orthogonal T-Junctions & Edges
+  // 5. Build Orthogonal T-Junctions & Edges
   const edges = [];
   const processedSpousePairs = new Set();
   const processedParentChildPairs = new Set();
 
   // A. Group children by parental pairs to form Marriage Unions
-  const parentPairs = new Map(); // key: pairKey -> Set of childIds
+  const parentPairs = new Map();
 
   relationships
     .filter((r) => r.relationship_type === 'parent')
@@ -353,18 +409,13 @@ export function buildFamilyTreeLayout(people = [], relationships = []) {
     });
 
   // C. For each family union (couple):
-  // 1. Create horizontal marriage line between spouses
-  // 2. If they have children, create union node and drop orthogonal branch lines with arrows
   parentPairs.forEach((union, pairKey) => {
     const pos1 = positions.get(union.parent1Id);
     const pos2 = positions.get(union.parent2Id);
     if (!pos1 || !pos2) return;
 
-    // Determine left and right spouse
     const leftId = pos1.x <= pos2.x ? union.parent1Id : union.parent2Id;
     const rightId = pos1.x <= pos2.x ? union.parent2Id : union.parent1Id;
-    const leftPos = pos1.x <= pos2.x ? pos1 : pos2;
-    const rightPos = pos1.x <= pos2.x ? pos2 : pos1;
 
     // Horizontal Marriage Edge
     if (!processedSpousePairs.has(pairKey)) {
@@ -383,7 +434,7 @@ export function buildFamilyTreeLayout(people = [], relationships = []) {
       });
     }
 
-    // If couple has children, create dynamic orthogonal branch lines directly from the relation path!
+    // Branch lines from the relation path down to each child
     const childIds = Array.from(union.children);
     if (childIds.length > 0) {
       childIds.forEach((childId) => {
@@ -398,21 +449,21 @@ export function buildFamilyTreeLayout(people = [], relationships = []) {
             otherParentId: rightId,
           },
           style: {
-            stroke: '#94a3b8',
+            stroke: '#0d9488',
             strokeWidth: 2,
           },
           markerEnd: {
             type: 'arrowclosed',
-            color: '#94a3b8',
-            width: 12,
-            height: 12,
+            color: '#0d9488',
+            width: 10,
+            height: 10,
           },
         });
       });
     }
   });
 
-  // D. For single parents with children (not covered by a couple union)
+  // D. For single parents with children
   relationships
     .filter((r) => r.relationship_type === 'parent')
     .forEach((rel) => {
@@ -427,14 +478,14 @@ export function buildFamilyTreeLayout(people = [], relationships = []) {
           type: 'familyBranchEdge',
           data: {},
           style: {
-            stroke: '#94a3b8',
+            stroke: '#0d9488',
             strokeWidth: 2,
           },
           markerEnd: {
             type: 'arrowclosed',
-            color: '#94a3b8',
-            width: 12,
-            height: 12,
+            color: '#0d9488',
+            width: 10,
+            height: 10,
           },
         });
       }

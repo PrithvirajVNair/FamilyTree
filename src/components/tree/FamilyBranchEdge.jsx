@@ -47,9 +47,30 @@ export function FamilyBranchEdge({
     stemStartY = (sHandleY + oHandleY) / 2;
   }
 
-  // Branch level: halfway between parents and child
-  const deltaY = targetY - stemStartY;
-  const branchY = deltaY > 30 ? stemStartY + deltaY * 0.5 : stemStartY + 25;
+  // Calculate the bottom of the parent cards to ensure the horizontal bus
+  // line is placed strictly below the parent cards and above the child card.
+  let parentBottomY = stemStartY;
+  if (otherParentNode && sourceNode) {
+    const sPos = sourceNode.internals?.positionAbsolute || sourceNode.position || { x: sourceX, y: sourceY };
+    const oPos = otherParentNode.internals?.positionAbsolute || otherParentNode.position || { x: sourceX, y: sourceY };
+    const sHeight = sourceNode.measured?.height || NODE_HEIGHT;
+    const oHeight = otherParentNode.measured?.height || NODE_HEIGHT;
+    parentBottomY = Math.max(sPos.y + sHeight, oPos.y + oHeight);
+  } else if (sourceNode) {
+    const sPos = sourceNode.internals?.positionAbsolute || sourceNode.position || { x: sourceX, y: sourceY };
+    const sHeight = sourceNode.measured?.height || NODE_HEIGHT;
+    parentBottomY = sPos.y + sHeight;
+  } else {
+    parentBottomY = sourceY;
+  }
+
+  // Branch level: clean corridor halfway between parent card bottoms and child card top
+  let branchY;
+  if (targetY > parentBottomY + 20) {
+    branchY = parentBottomY + (targetY - parentBottomY) * 0.45;
+  } else {
+    branchY = Math.max(stemStartY + 30, parentBottomY + 15);
+  }
 
   // Orthogonal T-junction path:
   // 1. Vertical stem from marriage line down to branchY
@@ -62,7 +83,7 @@ export function FamilyBranchEdge({
       id={id}
       path={path}
       style={{
-        stroke: '#94a3b8',
+        stroke: '#0d9488',
         strokeWidth: 2,
         ...style,
       }}

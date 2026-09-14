@@ -469,8 +469,8 @@ export function TreeCanvasInner({
                   <UserCheck size={18} color="var(--primary)" />
                   <div>
                     <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>
-                      {getPersonFullName(connectionPrompt.sourcePerson)} is Parent of{' '}
-                      {getPersonFullName(connectionPrompt.targetPerson)}
+                      {getPersonFullName(connectionPrompt.sourcePerson)} (Above) is Parent of{' '}
+                      {getPersonFullName(connectionPrompt.targetPerson)} (Below)
                     </div>
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                       Parent &rarr; Child connection
@@ -487,11 +487,11 @@ export function TreeCanvasInner({
                   <Baby size={18} color="var(--primary)" />
                   <div>
                     <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>
-                      {getPersonFullName(connectionPrompt.targetPerson)} is Parent of{' '}
-                      {getPersonFullName(connectionPrompt.sourcePerson)}
+                      {getPersonFullName(connectionPrompt.targetPerson)} (Above) is Parent of{' '}
+                      {getPersonFullName(connectionPrompt.sourcePerson)} (Below)
                     </div>
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                      Child &larr; Parent connection
+                      Parent &rarr; Child connection
                     </div>
                   </div>
                 </button>
@@ -505,7 +505,7 @@ export function TreeCanvasInner({
                   <Heart size={18} color="#d97706" />
                   <div>
                     <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>
-                      Spouses / Partners
+                      Spouses / Partners (Side-by-side with heart)
                     </div>
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                       Horizontal spousal union

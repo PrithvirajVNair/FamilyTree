@@ -11,6 +11,10 @@ import {
   Calendar,
   FileText,
   UserCheck,
+  Compass,
+  CheckCircle2,
+  SlidersHorizontal,
+  ArrowUpDown,
 } from 'lucide-react';
 import {
   getPersonFullName,
@@ -26,14 +30,19 @@ export function PersonDetailDrawer({
   person,
   allPeople = [],
   relationships = [],
+  rootPersonId = null,
+  onExploreFamily,
+  onOpenFilterModal,
   onClose,
   onEdit,
   onDelete,
   onAddRelative, // ({ targetPersonId, relationType })
+  onAddRelationship,
   onDeleteRelationship,
   onSelectPerson,
   canEdit = true,
 }) {
+
   if (!person) return null;
 
   const fullName = getPersonFullName(person);
@@ -146,9 +155,98 @@ export function PersonDetailDrawer({
             )}
           </div>
 
+          {/* Explore Family Perspective Action */}
+          {onExploreFamily && (
+            <div style={{ marginBottom: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {person.id === rootPersonId ? (
+                <>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '7px',
+                      padding: '9px 14px',
+                      backgroundColor: 'var(--primary-light)',
+                      color: 'var(--primary)',
+                      borderRadius: 'var(--radius-md)',
+                      fontSize: '0.84rem',
+                      fontWeight: 600,
+                      border: '1px solid var(--primary-border)',
+                    }}
+                  >
+                    <CheckCircle2 size={16} />
+                    <span>Currently Centered on {person.first_name || fullName}</span>
+                  </div>
+
+                  {onOpenFilterModal && (
+                    <button
+                      type="button"
+                      onClick={() => onOpenFilterModal(person.id)}
+                      className="btn btn-outline"
+                      style={{
+                        width: '100%',
+                        padding: '8px 14px',
+                        fontSize: '0.85rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '7px',
+                        fontWeight: 600,
+                      }}
+                    >
+                      <SlidersHorizontal size={15} />
+                      <span>Select Who Should Be There</span>
+                    </button>
+                  )}
+                </>
+              ) : (
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    type="button"
+                    onClick={() => onExploreFamily(person.id, false)}
+                    className="btn btn-primary"
+                    style={{
+                      flex: 1,
+                      padding: '10px 14px',
+                      fontSize: '0.88rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '7px',
+                      boxShadow: '0 2px 10px rgba(15, 118, 110, 0.25)',
+                    }}
+                    title={`Center the family tree around ${person.first_name || fullName}`}
+                  >
+                    <Compass size={16} />
+                    <span>Explore {person.first_name || fullName}&apos;s Family</span>
+                  </button>
+
+                  {onOpenFilterModal && (
+                    <button
+                      type="button"
+                      onClick={() => onExploreFamily(person.id, true)}
+                      className="btn btn-outline"
+                      style={{
+                        padding: '10px 12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                      title="Select who should be included in this view before exploring"
+                    >
+                      <SlidersHorizontal size={16} />
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Quick Action Buttons for editing/deleting */}
           {canEdit && (
             <div style={{ display: 'flex', gap: '10px', marginBottom: '24px' }}>
+
               <button
                 onClick={() => onEdit(person)}
                 className="btn btn-outline"
@@ -251,20 +349,35 @@ export function PersonDetailDrawer({
                           <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: '8px' }}>{getPersonYears(p)}</span>
                         </div>
                         {canEdit && rel && onDeleteRelationship && (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (window.confirm(`Unlink ${getPersonFullName(p)} as parent?`)) {
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            {onAddRelationship && (
+                              <button
+                                type="button"
+                                onClick={async (e) => {
+                                  e.stopPropagation();
+                                  await onDeleteRelationship(rel.id);
+                                  await onAddRelationship(person.id, p.id, 'parent');
+                                }}
+                                className="btn-ghost"
+                                style={{ padding: '4px', border: 'none', background: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}
+                                title="Swap parent/child direction (make this person parent instead)"
+                              >
+                                <ArrowUpDown size={13} />
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 onDeleteRelationship(rel.id);
-                              }
-                            }}
-                            className="btn-ghost"
-                            style={{ padding: '4px', border: 'none', background: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}
-                            title="Unlink parent relationship"
-                          >
-                            <X size={14} />
-                          </button>
+                              }}
+                              className="btn-ghost"
+                              style={{ padding: '4px', border: 'none', background: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}
+                              title="Unlink parent relationship"
+                            >
+                              <X size={14} />
+                            </button>
+                          </div>
                         )}
                       </div>
                     );
@@ -332,9 +445,7 @@ export function PersonDetailDrawer({
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation();
-                              if (window.confirm(`Unlink spouse relationship with ${getPersonFullName(p)}?`)) {
-                                onDeleteRelationship(rel.id);
-                              }
+                              onDeleteRelationship(rel.id);
                             }}
                             className="btn-ghost"
                             style={{ padding: '4px', border: 'none', background: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}
@@ -400,20 +511,35 @@ export function PersonDetailDrawer({
                           <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: '8px' }}>{getPersonYears(p)}</span>
                         </div>
                         {canEdit && rel && onDeleteRelationship && (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (window.confirm(`Unlink ${getPersonFullName(p)} as child?`)) {
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            {onAddRelationship && (
+                              <button
+                                type="button"
+                                onClick={async (e) => {
+                                  e.stopPropagation();
+                                  await onDeleteRelationship(rel.id);
+                                  await onAddRelationship(p.id, person.id, 'parent');
+                                }}
+                                className="btn-ghost"
+                                style={{ padding: '4px', border: 'none', background: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}
+                                title="Swap parent/child direction (make other person parent instead)"
+                              >
+                                <ArrowUpDown size={13} />
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 onDeleteRelationship(rel.id);
-                              }
-                            }}
-                            className="btn-ghost"
-                            style={{ padding: '4px', border: 'none', background: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}
-                            title="Unlink child relationship"
-                          >
-                            <X size={14} />
-                          </button>
+                              }}
+                              className="btn-ghost"
+                              style={{ padding: '4px', border: 'none', background: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}
+                              title="Unlink child relationship"
+                            >
+                              <X size={14} />
+                            </button>
+                          </div>
                         )}
                       </div>
                     );
