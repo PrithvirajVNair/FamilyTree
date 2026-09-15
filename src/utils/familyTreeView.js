@@ -1,23 +1,28 @@
 import { createFamilyGraph } from './familyGraph.js';
+import { getPersonKinshipRole } from './relationshipUtils.js';
 
 /**
- * Builds a scoped, visible tree view around a chosen root person.
+ * Builds a scoped, visible tree view around a chosen root person,
+ * or returns the full unrooted family tree if no root person is specified.
  *
  * CRITICAL ARCHITECTURAL PRINCIPLE:
- * This function determines WHO should be visible in the current visual perspective.
- * It does NOT compute visual coordinate positions (which is the job of familyTreeLayout.js).
- * It preserves the exact same person records without duplicating database entities.
+ * In a family tree, no single person is the default root. By default, the full
+ * family tree (all connected relatives) is displayed without filtering.
+ * Only when a user explicitly chooses to focus on or explore a specific person
+ * is a scoped sub-graph generated around that person.
  *
  * @param {Object} params
- * @param {string} params.rootPersonId - ID of the person at the center of the tree view
+ * @param {string} [params.rootPersonId] - ID of the person to focus the tree around (optional)
  * @param {Array} params.people - Full list of people in this family from Supabase
  * @param {Array} params.relationships - Full list of relationships from Supabase
  * @param {Object} [params.options] - Traversal limits
- * @param {number} [params.options.ancestors=2] - Levels of ancestors to include (parents, grandparents)
- * @param {number} [params.options.descendants=2] - Levels of descendants to include (children, grandchildren)
- * @param {boolean} [params.options.includeSpouses=true] - Whether to include spouses of visible members
- * @param {boolean} [params.options.includeSiblings=true] - Whether to include siblings of the root and descendants
- * @returns {Object} { people, relationships, rootPerson, allPeopleCount, isFiltered }
+ * @param {number} [params.options.ancestors=2] - Levels of ancestors to include
+ * @param {number} [params.options.descendants=2] - Levels of descendants to include
+ * @param {boolean} [params.options.includeSpouses=true] - Whether to include spouses
+ * @param {boolean} [params.options.includeSiblings=true] - Whether to include siblings
+ * @param {Set|Array} [params.options.customIncludedIds] - Explicit member IDs to display
+ * @param {boolean} [params.options.showAllConnected] - Whether to show all connected members
+ * @returns {Object} { people, relationships, rootPerson, allPeopleCount, isFiltered, allRelativesWithKinship }
  */
 export function buildFamilyTreeView({
   rootPersonId,
@@ -41,50 +46,36 @@ export function buildFamilyTreeView({
     descendants = 2,
     includeSpouses = true,
     includeSiblings = true,
-    customIncludedIds = null, // Set or Array of IDs, or null if using auto traversal
+    customIncludedIds = null,
     showAllConnected = false,
   } = options;
 
   const graph = createFamilyGraph(people, relationships);
 
-  // 1. Determine Root Person
-  let rootPerson = rootPersonId ? graph.getPerson(rootPersonId) : null;
+  // 1. Determine Root Person (ONLY if explicitly specified and exists in graph)
+  const rootPerson = rootPersonId ? graph.getPerson(rootPersonId) : null;
 
-  // Fallback if rootPersonId is not found or not provided:
-  if (!rootPerson) {
-    const peopleWithParents = new Set(
-      relationships
-        .filter((r) => r.relationship_type === 'parent')
-        .map((r) => r.person_2_id)
-    );
-    const rootAncestors = people.filter((p) => !peopleWithParents.has(p.id));
-    rootPerson = rootAncestors[0] || people[0];
-  }
-
-  if (!rootPerson) {
-    return {
-      people,
-      relationships,
-      rootPerson: null,
-      allPeopleCount: people.length,
-      isFiltered: false,
-      allRelativesWithKinship: [],
-    };
-  }
-
-  // 2. Determine visible person IDs around rootPerson
+  // 2. Determine visible person IDs
   let visibleIds = new Set();
 
-  if (customIncludedIds && (Array.isArray(customIncludedIds) || customIncludedIds instanceof Set)) {
-    // Explicit user-selected members mode
+  if (!rootPerson) {
+    // UNROOTED FULL FAMILY VIEW
+    // No one is root: default to displaying all people unless custom IDs are given
+    if (customIncludedIds && (Array.isArray(customIncludedIds) || customIncludedIds instanceof Set)) {
+      visibleIds = new Set(customIncludedIds);
+    } else {
+      visibleIds = new Set(people.map((p) => p.id));
+    }
+  } else if (customIncludedIds && (Array.isArray(customIncludedIds) || customIncludedIds instanceof Set)) {
+    // Explicit user-selected members mode around focused root
     const customSet = new Set(customIncludedIds);
-    customSet.add(rootPerson.id); // Root person is always maintained
+    customSet.add(rootPerson.id);
     visibleIds = customSet;
   } else if (showAllConnected) {
-    // Show entire connected component
+    // Show entire connected component of root
     visibleIds = graph.getAllConnectedIds(rootPerson.id);
   } else {
-    // Traversal presets mode
+    // Traversal presets mode scoped to focused root person
     visibleIds.add(rootPerson.id);
 
     // A. Ancestors up to specified depth
@@ -131,27 +122,40 @@ export function buildFamilyTreeView({
 
   const isFiltered = visiblePeople.length < people.length;
 
-  // 4. Annotate all people with kinship labels relative to rootPerson for the selector UI
+  // 4. Annotate all people with kinship labels for the selector UI / detail drawer
   const allRelativesWithKinship = people.map((person) => {
-    const kinshipLabel = graph.getRelationshipLabel(rootPerson.id, person.id);
     const isVisible = visibleIds.has(person.id);
-    const isRoot = person.id === rootPerson.id;
 
-    let categoryOrder = 7;
-    if (isRoot) categoryOrder = 0;
-    else if (['Father', 'Mother', 'Parent'].includes(kinshipLabel)) categoryOrder = 1;
-    else if (['Wife', 'Husband', 'Spouse'].includes(kinshipLabel)) categoryOrder = 2;
-    else if (['Son', 'Daughter', 'Child'].includes(kinshipLabel)) categoryOrder = 3;
-    else if (['Brother', 'Sister', 'Sibling'].includes(kinshipLabel)) categoryOrder = 4;
-    else if (['Grandfather', 'Grandmother', 'Grandparent'].includes(kinshipLabel)) categoryOrder = 5;
-    else if (['Grandson', 'Granddaughter', 'Grandchild'].includes(kinshipLabel)) categoryOrder = 6;
+    if (rootPerson) {
+      const isRoot = person.id === rootPerson.id;
+      const kinshipLabel = graph.getRelationshipLabel(rootPerson.id, person.id);
 
+      let categoryOrder = 7;
+      if (isRoot) categoryOrder = 0;
+      else if (['Father', 'Mother', 'Parent'].includes(kinshipLabel)) categoryOrder = 1;
+      else if (['Wife', 'Husband', 'Spouse'].includes(kinshipLabel)) categoryOrder = 2;
+      else if (['Son', 'Daughter', 'Child'].includes(kinshipLabel)) categoryOrder = 3;
+      else if (['Brother', 'Sister', 'Sibling'].includes(kinshipLabel)) categoryOrder = 4;
+      else if (['Grandfather', 'Grandmother', 'Grandparent'].includes(kinshipLabel)) categoryOrder = 5;
+      else if (['Grandson', 'Granddaughter', 'Grandchild'].includes(kinshipLabel)) categoryOrder = 6;
+
+      return {
+        person,
+        kinshipLabel,
+        isVisible,
+        isRoot,
+        categoryOrder,
+      };
+    }
+
+    // When there is no root person, use general genealogical kinship role
+    const kinshipLabel = getPersonKinshipRole(person, relationships);
     return {
       person,
       kinshipLabel,
       isVisible,
-      isRoot,
-      categoryOrder,
+      isRoot: false,
+      categoryOrder: 1,
     };
   }).sort((a, b) => {
     if (a.categoryOrder !== b.categoryOrder) {

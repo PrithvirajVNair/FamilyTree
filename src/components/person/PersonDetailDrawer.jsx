@@ -15,6 +15,7 @@ import {
   CheckCircle2,
   SlidersHorizontal,
   ArrowUpDown,
+  RotateCcw,
 } from 'lucide-react';
 import {
   getPersonFullName,
@@ -32,6 +33,7 @@ export function PersonDetailDrawer({
   relationships = [],
   rootPersonId = null,
   onExploreFamily,
+  onClearFocus,
   onOpenFilterModal,
   onClose,
   onEdit,
@@ -176,7 +178,7 @@ export function PersonDetailDrawer({
                     }}
                   >
                     <CheckCircle2 size={16} />
-                    <span>Currently Centered on {person.first_name || fullName}</span>
+                    <span>Currently Focused on {person.first_name || fullName}</span>
                   </div>
 
                   {onOpenFilterModal && (
@@ -199,6 +201,28 @@ export function PersonDetailDrawer({
                       <span>Select Who Should Be There</span>
                     </button>
                   )}
+
+                  {onClearFocus && (
+                    <button
+                      type="button"
+                      onClick={onClearFocus}
+                      className="btn btn-ghost btn-sm"
+                      style={{
+                        width: '100%',
+                        padding: '7px 12px',
+                        fontSize: '0.82rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px',
+                        color: 'var(--text-secondary)',
+                      }}
+                      title="Return to the complete unrooted family tree"
+                    >
+                      <RotateCcw size={14} />
+                      <span>Clear Focus &amp; Show Full Tree</span>
+                    </button>
+                  )}
                 </>
               ) : (
                 <div style={{ display: 'flex', gap: '8px' }}>
@@ -216,10 +240,10 @@ export function PersonDetailDrawer({
                       gap: '7px',
                       boxShadow: '0 2px 10px rgba(15, 118, 110, 0.25)',
                     }}
-                    title={`Center the family tree around ${person.first_name || fullName}`}
+                    title={`Focus the family tree around ${person.first_name || fullName}`}
                   >
                     <Compass size={16} />
-                    <span>Explore {person.first_name || fullName}&apos;s Family</span>
+                    <span>Focus Tree on {person.first_name || fullName}</span>
                   </button>
 
                   {onOpenFilterModal && (

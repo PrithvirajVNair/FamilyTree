@@ -66,13 +66,6 @@ export function FamilyTree() {
     });
   }, [urlPersonId, people, relationships, viewOptions]);
 
-  // Sync default root person to URL if no ?person= query param is specified
-  useEffect(() => {
-    if (!urlPersonId && rootPerson?.id) {
-      setSearchParams({ person: rootPerson.id }, { replace: true });
-    }
-  }, [urlPersonId, rootPerson, setSearchParams]);
-
   // UI state
   const [selectedPerson, setSelectedPerson] = useState(null);
   const [highlightedPersonId, setHighlightedPersonId] = useState(null);
@@ -88,7 +81,7 @@ export function FamilyTree() {
   const fitViewRef = useRef(null);
   const resetLayoutRef = useRef(null);
 
-  // Switch root person view (Explore Family)
+  // Switch to a focused person view (Explore Family)
   const handleExploreFamily = useCallback(
     (personId, openCustomize = false) => {
       if (!personId) return;
@@ -110,8 +103,8 @@ export function FamilyTree() {
     [setSearchParams]
   );
 
-  // Reset view filter back to default
-  const handleResetView = useCallback(() => {
+  // Reset focus and return to full unrooted family tree
+  const handleResetToFullTree = useCallback(() => {
     setViewOptions({
       ancestors: 2,
       descendants: 2,
@@ -120,7 +113,8 @@ export function FamilyTree() {
       customIncludedIds: null,
       showAllConnected: false,
     });
-  }, []);
+    setSearchParams({}, { replace: true });
+  }, [setSearchParams]);
 
   // Handling person selection (from canvas or search)
   const handleSelectPerson = (person) => {
@@ -235,9 +229,10 @@ export function FamilyTree() {
       {/* 2b. Navigation Context & Perspective Breadcrumb */}
       <TreeBreadcrumb
         rootPerson={rootPerson}
+        familyName={family.name}
         onNavigateBack={() => navigate(-1)}
-        canGoBack={true}
-        onResetToMain={handleResetView}
+        canGoBack={Boolean(urlPersonId)}
+        onResetToFullTree={handleResetToFullTree}
         onOpenFilterModal={() => setFilterModalOpen(true)}
         totalPeopleCount={allPeopleCount}
         visiblePeopleCount={visiblePeople.length}
@@ -275,6 +270,7 @@ export function FamilyTree() {
             relationships={relationships}
             rootPersonId={rootPerson?.id}
             onExploreFamily={handleExploreFamily}
+            onClearFocus={handleResetToFullTree}
             onOpenFilterModal={(targetPersonId) => {
               if (targetPersonId && targetPersonId !== rootPerson?.id) {
                 handleExploreFamily(targetPersonId, true);

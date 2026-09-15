@@ -651,12 +651,22 @@ button, input, select, textarea {
   transform: scale(1.45) !important;
 }
 
-/* Top & Bottom Handles: Parent-Child relations (Forest Emerald) */
-.handle-top, .handle-bottom {
+/* Top Handles: Parent-Child relations (Forest Emerald) */
+.handle-top {
   background-color: var(--primary) !important;
 }
-.handle-top:hover, .handle-bottom:hover {
+.handle-top:hover {
   box-shadow: 0 0 0 4px var(--primary-ring), 0 3px 8px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Bottom Handles: completely hidden / no visual connector dot */
+.handle-bottom {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
 }
 
 /* Left & Right Handles: Spouse / Partner relations (Warm Amber) */

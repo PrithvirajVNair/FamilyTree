@@ -103,21 +103,13 @@ export const PersonNode = memo(function PersonNode({ id, data, selected }) {
       </div>
 
 
-      {/* Bottom Handles (Child Connection - supports outgoing and incoming drag) */}
+      {/* Bottom Handle (invisible anchor for single-parent line routing without visual dot) */}
       <Handle
         type="source"
         position={Position.Bottom}
         id="bottom"
         className="handle-bottom"
-        title="Child connector (Drag to parent or drop from child)"
-        style={{ bottom: -7 }}
-      />
-      <Handle
-        type="target"
-        position={Position.Bottom}
-        id="bottom-target"
-        className="handle-bottom"
-        style={{ bottom: -7, opacity: 0 }}
+        style={{ bottom: 0, opacity: 0, pointerEvents: 'none', width: 1, height: 1, minWidth: 1, minHeight: 1, background: 'transparent', border: 'none' }}
       />
 
       {/* Left Handles for spouse connections */}

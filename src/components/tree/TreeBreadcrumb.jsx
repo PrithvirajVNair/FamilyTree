@@ -4,17 +4,17 @@ import { getPersonFullName } from '../../utils/relationshipUtils';
 
 export function TreeBreadcrumb({
   rootPerson,
+  familyName,
   onNavigateBack,
   canGoBack = false,
-  onResetToMain,
+  onResetToFullTree,
   onOpenFilterModal,
   totalPeopleCount = 0,
   visiblePeopleCount = 0,
   isFiltered = false,
 }) {
-  if (!rootPerson) return null;
-
-  const rootName = getPersonFullName(rootPerson);
+  const rootName = rootPerson ? getPersonFullName(rootPerson) : null;
+  const isFullTree = !rootPerson;
 
   return (
     <div
@@ -45,31 +45,40 @@ export function TreeBreadcrumb({
               fontWeight: 600,
               color: 'var(--primary)',
             }}
-            title="Return to previous family perspective"
+            title="Return to previous perspective"
           >
             <ArrowLeft size={15} />
             <span>Back</span>
           </button>
         )}
 
-        {/* Current Perspective Context */}
+        {/* Perspective Context Badge */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <div
             style={{
               display: 'inline-flex',
               alignItems: 'center',
-              gap: '5px',
-              padding: '4px 10px',
+              gap: '6px',
+              padding: '4px 12px',
               borderRadius: '9999px',
-              backgroundColor: 'var(--bg-subtle)',
-              border: '1px solid var(--border-color)',
-              color: 'var(--text-primary)',
+              backgroundColor: isFullTree ? 'rgba(15, 118, 110, 0.08)' : 'var(--bg-subtle)',
+              border: isFullTree ? '1px solid var(--primary-border)' : '1px solid var(--border-color)',
+              color: isFullTree ? 'var(--primary-dark, #0f766e)' : 'var(--text-primary)',
               fontWeight: 600,
               fontSize: '0.82rem',
             }}
           >
-            <Compass size={14} color="var(--primary)" />
-            <span>{rootName}&apos;s Family</span>
+            {isFullTree ? (
+              <>
+                <Users size={14} color="var(--primary)" />
+                <span>{familyName ? `${familyName} (Full Tree)` : 'Full Family Tree'}</span>
+              </>
+            ) : (
+              <>
+                <Compass size={14} color="var(--primary)" />
+                <span>Focus: {rootName}&apos;s Lineage</span>
+              </>
+            )}
           </div>
 
           <span
@@ -83,7 +92,9 @@ export function TreeBreadcrumb({
           >
             <Users size={12} />
             <span>
-              Showing {visiblePeopleCount} of {totalPeopleCount} relatives
+              {isFiltered
+                ? `Showing ${visiblePeopleCount} of ${totalPeopleCount} relatives`
+                : `All ${totalPeopleCount} relatives`}
             </span>
           </span>
         </div>
@@ -112,22 +123,27 @@ export function TreeBreadcrumb({
         )}
       </div>
 
-      {/* Right Action: Reset to Main Family View if filtered */}
-      {isFiltered && onResetToMain && (
+      {/* Right Action: Return to Full Family Tree if focused or filtered */}
+      {(!isFullTree || isFiltered) && onResetToFullTree && (
         <button
-          onClick={onResetToMain}
+          onClick={onResetToFullTree}
           className="btn btn-ghost btn-sm"
           style={{
             fontSize: '0.78rem',
-            color: 'var(--text-secondary)',
+            color: 'var(--primary)',
+            fontWeight: 600,
             display: 'inline-flex',
             alignItems: 'center',
             gap: '5px',
+            padding: '4px 10px',
+            borderRadius: 'var(--radius-sm)',
+            border: '1px solid var(--primary-border)',
+            backgroundColor: 'var(--primary-light)',
           }}
-          title="Reset to the default family view"
+          title="Return to the complete unrooted family tree"
         >
           <RotateCcw size={13} />
-          <span>Reset View</span>
+          <span>View Full Tree</span>
         </button>
       )}
     </div>

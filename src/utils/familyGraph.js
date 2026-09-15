@@ -197,7 +197,7 @@ export class FamilyGraph {
    */
   getRelationshipLabel(rootPersonId, targetPersonId) {
     if (!rootPersonId || !targetPersonId) return 'Relative';
-    if (rootPersonId === targetPersonId) return 'Self (Root)';
+    if (rootPersonId === targetPersonId) return 'Focused Person';
 
     const target = this.getPerson(targetPersonId);
     const gender = target?.gender?.toLowerCase();

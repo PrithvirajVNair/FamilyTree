@@ -56,9 +56,9 @@ export function ViewFilterModal({
     }
   }, [isOpen, allRelativesWithKinship, currentOptions, rootPerson]);
 
-  if (!isOpen || !rootPerson) return null;
+  if (!isOpen) return null;
 
-  const rootFullName = getPersonFullName(rootPerson);
+  const rootFullName = rootPerson ? getPersonFullName(rootPerson) : null;
 
   // Filter relatives list by search query
   const filteredRelatives = allRelativesWithKinship.filter(({ person, kinshipLabel }) => {
@@ -71,7 +71,7 @@ export function ViewFilterModal({
 
   // Toggle individual person
   const handleTogglePerson = (personId) => {
-    if (personId === rootPerson.id) return; // Root cannot be deselected
+    if (rootPerson && personId === rootPerson.id) return; // Focused root cannot be deselected in focused view
     setSelectedIds((prev) => {
       const next = new Set(prev);
       if (next.has(personId)) {
@@ -89,9 +89,9 @@ export function ViewFilterModal({
     setMode(presetType);
     if (presetType === 'all') {
       const allIds = new Set(allRelativesWithKinship.map((r) => r.person.id));
-      allIds.add(rootPerson.id);
+      if (rootPerson) allIds.add(rootPerson.id);
       setSelectedIds(allIds);
-    } else if (presetType === 'immediate') {
+    } else if (presetType === 'immediate' && rootPerson) {
       const immediateIds = new Set([rootPerson.id]);
       allRelativesWithKinship.forEach(({ person, kinshipLabel }) => {
         if (
@@ -114,7 +114,7 @@ export function ViewFilterModal({
         }
       });
       setSelectedIds(immediateIds);
-    } else if (presetType === 'lineage') {
+    } else if (presetType === 'lineage' && rootPerson) {
       const lineageIds = new Set([rootPerson.id]);
       allRelativesWithKinship.forEach(({ person, kinshipLabel }) => {
         if (
@@ -142,13 +142,17 @@ export function ViewFilterModal({
 
   const handleSelectAll = () => {
     const all = new Set(allRelativesWithKinship.map((r) => r.person.id));
-    all.add(rootPerson.id);
+    if (rootPerson) all.add(rootPerson.id);
     setSelectedIds(all);
     setMode('custom');
   };
 
-  const handleClearNonRoot = () => {
-    setSelectedIds(new Set([rootPerson.id]));
+  const handleClear = () => {
+    if (rootPerson) {
+      setSelectedIds(new Set([rootPerson.id]));
+    } else {
+      setSelectedIds(new Set());
+    }
     setMode('custom');
   };
 
@@ -210,10 +214,12 @@ export function ViewFilterModal({
             </div>
             <div>
               <h3 style={{ fontSize: '1.15rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
-                Customize {rootFullName}&apos;s Family View
+                {rootPerson ? `Customize ${rootFullName}'s Family View` : 'Select Who Should Be There'}
               </h3>
               <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                Select who should be rendered in this perspective ({selectedIds.size} of {allRelativesWithKinship.length} relatives selected)
+                {rootPerson
+                  ? `Select who should be rendered in this perspective (${selectedIds.size} of ${allRelativesWithKinship.length} relatives selected)`
+                  : `Choose which relatives to display in the tree (${selectedIds.size} of ${allRelativesWithKinship.length} relatives selected)`}
               </p>
             </div>
           </div>
@@ -241,25 +247,29 @@ export function ViewFilterModal({
               Quick Presets
             </label>
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-              <button
-                type="button"
-                onClick={() => handleApplyPreset('immediate')}
-                className={`btn btn-sm ${mode === 'immediate' ? 'btn-primary' : 'btn-outline'}`}
-                style={{ fontSize: '0.82rem', gap: '6px' }}
-              >
-                <Users size={14} />
-                <span>Immediate Family</span>
-              </button>
+              {rootPerson && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => handleApplyPreset('immediate')}
+                    className={`btn btn-sm ${mode === 'immediate' ? 'btn-primary' : 'btn-outline'}`}
+                    style={{ fontSize: '0.82rem', gap: '6px' }}
+                  >
+                    <Users size={14} />
+                    <span>Immediate Family</span>
+                  </button>
 
-              <button
-                type="button"
-                onClick={() => handleApplyPreset('lineage')}
-                className={`btn btn-sm ${mode === 'lineage' ? 'btn-primary' : 'btn-outline'}`}
-                style={{ fontSize: '0.82rem', gap: '6px' }}
-              >
-                <GitFork size={14} />
-                <span>Direct Lineage</span>
-              </button>
+                  <button
+                    type="button"
+                    onClick={() => handleApplyPreset('lineage')}
+                    className={`btn btn-sm ${mode === 'lineage' ? 'btn-primary' : 'btn-outline'}`}
+                    style={{ fontSize: '0.82rem', gap: '6px' }}
+                  >
+                    <GitFork size={14} />
+                    <span>Direct Lineage</span>
+                  </button>
+                </>
+              )}
 
               <button
                 type="button"
@@ -268,7 +278,7 @@ export function ViewFilterModal({
                 style={{ fontSize: '0.82rem', gap: '6px' }}
               >
                 <Sparkles size={14} />
-                <span>All Connected Relatives</span>
+                <span>All Relatives</span>
               </button>
 
               <button
@@ -322,7 +332,7 @@ export function ViewFilterModal({
               </button>
               <button
                 type="button"
-                onClick={handleClearNonRoot}
+                onClick={handleClear}
                 className="btn btn-ghost btn-sm"
                 style={{ fontSize: '0.78rem', color: 'var(--text-muted)', padding: '5px 8px' }}
               >
@@ -438,7 +448,7 @@ export function ViewFilterModal({
                           }}
                         >
                           <Compass size={12} />
-                          <span>Center Root</span>
+                          <span>Focused Person</span>
                         </span>
                       ) : (
                         <span
@@ -477,7 +487,11 @@ export function ViewFilterModal({
           <button
             type="button"
             onClick={() => {
-              handleApplyPreset('immediate');
+              if (rootPerson) {
+                handleApplyPreset('immediate');
+              } else {
+                handleSelectAll();
+              }
             }}
             className="btn btn-ghost btn-sm"
             style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', gap: '5px' }}
